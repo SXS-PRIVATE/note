@@ -1,0 +1,157 @@
+
+<html>
+<head>
+    <title>ResultSet2Bean.java</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <style type="text/css">
+        .s0 { color: #d73a49;}
+        .s1 { color: #24292e;}
+        .s2 { color: #808080;}
+        .s3 { color: #6a737d;}
+        .s4 { color: #005cc5;}
+        .s5 { color: #032f62;}
+        .ln { color: #aaaaaa; font-weight: normal; font-style: normal; }
+    </style>
+</head>
+<body bgcolor="#ffffff">
+<p>一、创建枚举 </p>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">package </span><span class="s1">cn.shu.blog.enums</span><span class="s0">;</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">public enum </span><span class="s1">FileTypeEnum {</span>
+<a name="l4"><span class="ln">4    </span></a>    <span class="s1">NUMM(</span><span class="s2">0</span><span class="s0">,</span><span class="s3">&quot;NULL&quot;</span><span class="s1">)</span><span class="s0">,</span>
+<a name="l5"><span class="ln">5    </span></a>    <span class="s1">PDF(</span><span class="s2">1</span><span class="s0">,</span><span class="s3">&quot;.pdf&quot;</span><span class="s1">)</span><span class="s0">,</span>
+<a name="l6"><span class="ln">6    </span></a>    <span class="s1">HTML(</span><span class="s2">2</span><span class="s0">,</span><span class="s3">&quot;.html&quot;</span><span class="s1">)</span><span class="s0">;</span>
+<a name="l7"><span class="ln">7    </span></a>
+<a name="l8"><span class="ln">8    </span></a>    <span class="s0">private final short </span><span class="s1">code</span><span class="s0">;</span>
+<a name="l9"><span class="ln">9    </span></a>    <span class="s0">private final </span><span class="s1">String type</span><span class="s0">;</span>
+<a name="l10"><span class="ln">10   </span></a>
+<a name="l11"><span class="ln">11   </span></a>    <span class="s1">FileTypeEnum(</span><span class="s0">int </span><span class="s1">i</span><span class="s0">, </span><span class="s1">String s) {</span>
+<a name="l12"><span class="ln">12   </span></a>        <span class="s0">this</span><span class="s1">.code = (</span><span class="s0">short</span><span class="s1">) i</span><span class="s0">;</span>
+<a name="l13"><span class="ln">13   </span></a>        <span class="s0">this</span><span class="s1">.type = s</span><span class="s0">;</span>
+<a name="l14"><span class="ln">14   </span></a>    <span class="s1">}</span>
+<a name="l15"><span class="ln">15   </span></a><span class="s1">}</span>
+<a name="l16"><span class="ln">16   </span></a></pre>
+<p>二、创建自定义转换类，继承BaseTypeHandler抽象类，实现四个方法 </p>
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">package </span><span class="s1">cn.shu.blog</span><span class="s0">;</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">import </span><span class="s1">org.apache.ibatis.type.BaseTypeHandler</span><span class="s0">;</span>
+<a name="l4"><span class="ln">4    </span></a><span class="s0">import </span><span class="s1">org.apache.ibatis.type.JdbcType</span><span class="s0">;</span>
+<a name="l5"><span class="ln">5    </span></a><span class="s0">import </span><span class="s1">org.apache.ibatis.type.MappedTypes</span><span class="s0">;</span>
+<a name="l6"><span class="ln">6    </span></a>
+<a name="l7"><span class="ln">7    </span></a><span class="s0">import </span><span class="s1">java.lang.reflect.Field</span><span class="s0">;</span>
+<a name="l8"><span class="ln">8    </span></a><span class="s0">import </span><span class="s1">java.sql.CallableStatement</span><span class="s0">;</span>
+<a name="l9"><span class="ln">9    </span></a><span class="s0">import </span><span class="s1">java.sql.PreparedStatement</span><span class="s0">;</span>
+<a name="l10"><span class="ln">10   </span></a><span class="s0">import </span><span class="s1">java.sql.ResultSet</span><span class="s0">;</span>
+<a name="l11"><span class="ln">11   </span></a><span class="s0">import </span><span class="s1">java.sql.SQLException</span><span class="s0">;</span>
+<a name="l12"><span class="ln">12   </span></a>
+<a name="l13"><span class="ln">13   </span></a><span class="s2">/**</span>
+<a name="l14"><span class="ln">14   </span></a> <span class="s2">* </span><span class="s3">@author </span><span class="s2">SXS</span>
+<a name="l15"><span class="ln">15   </span></a> <span class="s2">* </span><span class="s3">@since </span><span class="s2">3/26/2021</span>
+<a name="l16"><span class="ln">16   </span></a> <span class="s2">*/</span>
+<a name="l17"><span class="ln">17   </span></a>
+<a name="l18"><span class="ln">18   </span></a><span class="s2">/**</span>
+<a name="l19"><span class="ln">19   </span></a> <span class="s2">* 在用resultMap处理结果集的时候 指定该类为TypeHandler，可将数据库返回的结果封装为指定的类</span>
+<a name="l20"><span class="ln">20   </span></a> <span class="s2">*/</span>
+<a name="l21"><span class="ln">21   </span></a><span class="s0">public class </span><span class="s1">EnumTypeHandler&lt;E </span><span class="s0">extends </span><span class="s1">Enum&lt;E&gt;&gt; </span><span class="s0">extends </span><span class="s1">BaseTypeHandler&lt;Enum&lt;E&gt;&gt; {</span>
+<a name="l22"><span class="ln">22   </span></a>    <span class="s0">private final </span><span class="s1">Class&lt;E&gt; type</span><span class="s0">;</span>
+<a name="l23"><span class="ln">23   </span></a>
+<a name="l24"><span class="ln">24   </span></a>    <span class="s0">public </span><span class="s1">EnumTypeHandler(Class&lt;E&gt; type) {</span>
+<a name="l25"><span class="ln">25   </span></a>        <span class="s0">if </span><span class="s1">(type == </span><span class="s0">null</span><span class="s1">) {</span>
+<a name="l26"><span class="ln">26   </span></a>            <span class="s0">throw new </span><span class="s1">IllegalArgumentException(</span><span class="s4">&quot;Type argument cannot be null&quot;</span><span class="s1">)</span><span class="s0">;</span>
+<a name="l27"><span class="ln">27   </span></a>        <span class="s1">} </span><span class="s0">else </span><span class="s1">{</span>
+<a name="l28"><span class="ln">28   </span></a>            <span class="s0">this</span><span class="s1">.type = type</span><span class="s0">;</span>
+<a name="l29"><span class="ln">29   </span></a>        <span class="s1">}</span>
+<a name="l30"><span class="ln">30   </span></a>    <span class="s1">}</span>
+<a name="l31"><span class="ln">31   </span></a>
+<a name="l32"><span class="ln">32   </span></a>    <span class="s1">@Override</span>
+<a name="l33"><span class="ln">33   </span></a>    <span class="s0">public void </span><span class="s1">setNonNullParameter(PreparedStatement preparedStatement</span><span class="s0">, int </span><span class="s1">i</span><span class="s0">, </span><span class="s1">Enum&lt;E&gt; eEnum</span><span class="s0">, </span><span class="s1">JdbcType jdbcType) </span><span class="s0">throws </span><span class="s1">SQLException {</span>
+<a name="l34"><span class="ln">34   </span></a>        <span class="s0">try </span><span class="s1">{</span>
+<a name="l35"><span class="ln">35   </span></a>            <span class="s1">Class&lt;? </span><span class="s0">extends </span><span class="s1">Enum&gt; aClass = eEnum.getClass()</span><span class="s0">;</span>
+<a name="l36"><span class="ln">36   </span></a>            <span class="s1">Field field = aClass.getDeclaredField(</span><span class="s4">&quot;code&quot;</span><span class="s1">)</span><span class="s0">;</span>
+<a name="l37"><span class="ln">37   </span></a>            <span class="s1">field.setAccessible(</span><span class="s0">true</span><span class="s1">)</span><span class="s0">;</span>
+<a name="l38"><span class="ln">38   </span></a>            <span class="s0">short </span><span class="s1">aShort = Short.parseShort(field.get(eEnum).toString())</span><span class="s0">;</span>
+<a name="l39"><span class="ln">39   </span></a>            <span class="s1">preparedStatement.setShort(i</span><span class="s0">, </span><span class="s1">aShort)</span><span class="s0">;</span>
+<a name="l40"><span class="ln">40   </span></a>        <span class="s1">} </span><span class="s0">catch </span><span class="s1">(Exception e) {</span>
+<a name="l41"><span class="ln">41   </span></a>            <span class="s1">preparedStatement.setShort(i</span><span class="s0">, </span><span class="s1">(</span><span class="s0">short</span><span class="s1">) </span><span class="s5">0</span><span class="s1">)</span><span class="s0">;</span>
+<a name="l42"><span class="ln">42   </span></a>        <span class="s1">}</span>
+<a name="l43"><span class="ln">43   </span></a>    <span class="s1">}</span>
+<a name="l44"><span class="ln">44   </span></a>
+<a name="l45"><span class="ln">45   </span></a>    <span class="s1">@Override</span>
+<a name="l46"><span class="ln">46   </span></a>    <span class="s0">public </span><span class="s1">Enum&lt;E&gt; getNullableResult(ResultSet resultSet</span><span class="s0">, </span><span class="s1">String s) </span><span class="s0">throws </span><span class="s1">SQLException {</span>
+<a name="l47"><span class="ln">47   </span></a>        <span class="s0">short </span><span class="s1">aShort = resultSet.getShort(s)</span><span class="s0">;</span>
+<a name="l48"><span class="ln">48   </span></a>        <span class="s0">return </span><span class="s1">matchENUM(aShort)</span><span class="s0">;</span>
+<a name="l49"><span class="ln">49   </span></a>    <span class="s1">}</span>
+<a name="l50"><span class="ln">50   </span></a>
+<a name="l51"><span class="ln">51   </span></a>    <span class="s1">@Override</span>
+<a name="l52"><span class="ln">52   </span></a>    <span class="s0">public </span><span class="s1">Enum&lt;E&gt; getNullableResult(ResultSet resultSet</span><span class="s0">, int </span><span class="s1">i) </span><span class="s0">throws </span><span class="s1">SQLException {</span>
+<a name="l53"><span class="ln">53   </span></a>        <span class="s0">short </span><span class="s1">aShort = resultSet.getShort(i)</span><span class="s0">;</span>
+<a name="l54"><span class="ln">54   </span></a>        <span class="s0">return </span><span class="s1">matchENUM(aShort)</span><span class="s0">;</span>
+<a name="l55"><span class="ln">55   </span></a>    <span class="s1">}</span>
+<a name="l56"><span class="ln">56   </span></a>
+<a name="l57"><span class="ln">57   </span></a>    <span class="s1">@Override</span>
+<a name="l58"><span class="ln">58   </span></a>    <span class="s0">public </span><span class="s1">Enum&lt;E&gt; getNullableResult(CallableStatement callableStatement</span><span class="s0">, int </span><span class="s1">i) </span><span class="s0">throws </span><span class="s1">SQLException {</span>
+<a name="l59"><span class="ln">59   </span></a>
+<a name="l60"><span class="ln">60   </span></a>        <span class="s0">short </span><span class="s1">aShort = callableStatement.getShort(i)</span><span class="s0">;</span>
+<a name="l61"><span class="ln">61   </span></a>        <span class="s0">return </span><span class="s1">matchENUM(aShort)</span><span class="s0">;</span>
+<a name="l62"><span class="ln">62   </span></a>    <span class="s1">}</span>
+<a name="l63"><span class="ln">63   </span></a>
+<a name="l64"><span class="ln">64   </span></a>
+<a name="l65"><span class="ln">65   </span></a>    <span class="s0">private </span><span class="s1">Enum&lt;E&gt; matchENUM(</span><span class="s0">short </span><span class="s1">code){</span>
+<a name="l66"><span class="ln">66   </span></a>        <span class="s0">for </span><span class="s1">(E enumConstant : type.getEnumConstants()) {</span>
+<a name="l67"><span class="ln">67   </span></a>            <span class="s1">Field value = </span><span class="s0">null;</span>
+<a name="l68"><span class="ln">68   </span></a>            <span class="s0">try </span><span class="s1">{</span>
+<a name="l69"><span class="ln">69   </span></a>                <span class="s1">value = enumConstant.getClass().getDeclaredField(</span><span class="s4">&quot;code&quot;</span><span class="s1">)</span><span class="s0">;</span>
+<a name="l70"><span class="ln">70   </span></a>            <span class="s1">} </span><span class="s0">catch </span><span class="s1">(NoSuchFieldException e) {</span>
+<a name="l71"><span class="ln">71   </span></a>                <span class="s1">e.printStackTrace()</span><span class="s0">;</span>
+<a name="l72"><span class="ln">72   </span></a>                <span class="s0">return null;</span>
+<a name="l73"><span class="ln">73   </span></a>            <span class="s1">}</span>
+<a name="l74"><span class="ln">74   </span></a>            <span class="s1">value.setAccessible(</span><span class="s0">true</span><span class="s1">)</span><span class="s0">;</span>
+<a name="l75"><span class="ln">75   </span></a>            <span class="s0">short </span><span class="s1">aShort1 = </span><span class="s5">0</span><span class="s0">;</span>
+<a name="l76"><span class="ln">76   </span></a>            <span class="s0">try </span><span class="s1">{</span>
+<a name="l77"><span class="ln">77   </span></a>                <span class="s1">aShort1 = value.getShort(enumConstant)</span><span class="s0">;</span>
+<a name="l78"><span class="ln">78   </span></a>            <span class="s1">} </span><span class="s0">catch </span><span class="s1">(IllegalAccessException e) {</span>
+<a name="l79"><span class="ln">79   </span></a>                <span class="s1">e.printStackTrace()</span><span class="s0">;</span>
+<a name="l80"><span class="ln">80   </span></a>                <span class="s0">return null;</span>
+<a name="l81"><span class="ln">81   </span></a>            <span class="s1">}</span>
+<a name="l82"><span class="ln">82   </span></a>            <span class="s0">if </span><span class="s1">(code == aShort1){</span>
+<a name="l83"><span class="ln">83   </span></a>                <span class="s0">return </span><span class="s1">enumConstant</span><span class="s0">;</span>
+<a name="l84"><span class="ln">84   </span></a>            <span class="s1">}</span>
+<a name="l85"><span class="ln">85   </span></a>        <span class="s1">}</span>
+<a name="l86"><span class="ln">86   </span></a>        <span class="s0">return null;</span>
+<a name="l87"><span class="ln">87   </span></a>    <span class="s1">}</span>
+<a name="l88"><span class="ln">88   </span></a><span class="s1">}</span></pre>
+
+<p>三、创建Bean</p>
+
+<pre><a name="l1"><span class="ln">1    </span></a><span class="s0">package </span><span class="s1">cn.shu.blog.beans</span><span class="s0">;</span>
+<a name="l2"><span class="ln">2    </span></a>
+<a name="l3"><span class="ln">3    </span></a><span class="s0">import </span><span class="s1">cn.shu.blog.enums.FileTypeEnum</span><span class="s0">;</span>
+<a name="l4"><span class="ln">4    </span></a><span class="s0">import </span><span class="s1">lombok.Data</span><span class="s0">;</span>
+<a name="l5"><span class="ln">5    </span></a>
+<a name="l6"><span class="ln">6    </span></a><span class="s2">/**</span>
+<a name="l7"><span class="ln">7    </span></a> <span class="s2">* </span><span class="s3">@author </span><span class="s2">SXS</span>
+<a name="l8"><span class="ln">8    </span></a> <span class="s2">*/</span>
+<a name="l9"><span class="ln">9    </span></a><span class="s1">@Data</span>
+<a name="l10"><span class="ln">10   </span></a><span class="s0">public class </span><span class="s1">Category {</span>
+<a name="l11"><span class="ln">11   </span></a>
+<a name="l12"><span class="ln">12   </span></a>    <span class="s0">private </span><span class="s1">FileTypeEnum id</span><span class="s0">;</span>
+<a name="l13"><span class="ln">13   </span></a>
+<a name="l14"><span class="ln">14   </span></a>    <span class="s2">/**</span>
+<a name="l15"><span class="ln">15   </span></a>     <span class="s2">* 分类名</span>
+<a name="l16"><span class="ln">16   </span></a>     <span class="s2">*/</span>
+<a name="l17"><span class="ln">17   </span></a>    <span class="s0">private </span><span class="s1">String categoryName</span><span class="s0">;</span>
+<a name="l18"><span class="ln">18   </span></a><span class="s1">}</span>
+</pre>
+<p> 四、mapper配置</p>
+<pre>
+    <a name="l4"><span class="ln">4    </span></a>    <span class="s0">&lt;resultMap </span><span class="s1">id</span><span class="s2">=&quot;BaseResultMap&quot; </span><span class="s1">type</span><span class="s2">=&quot;cn.shu.blog.beans.Category&quot;</span><span class="s0">&gt;</span>
+<a name="l5"><span class="ln">5    </span></a>        <span class="s4">&lt;!--@mbg.generated--&gt;</span>
+<a name="l6"><span class="ln">6    </span></a>        <span class="s4">&lt;!--@Table category--&gt;</span>
+<a name="l7"><span class="ln">7    </span></a>        <span class="s0">&lt;id </span><span class="s1">column</span><span class="s2">=&quot;id&quot; </span><span class="s1">jdbcType</span><span class="s2">=&quot;INTEGER&quot; </span><span class="s1">property</span><span class="s2">=&quot;id&quot; </span>
+<a name="l8"><span class="ln">8    </span></a>            <span class="s1">typeHandler</span><span class="s2">=&quot;cn.shu.blog.EnumTypeHandler&quot;</span>
+<a name="l9"><span class="ln">9    </span></a>            <span class="s1">javaType </span><span class="s2">= &quot;cn.shu.blog.enums.FileTypeEnum&quot;</span><span class="s0">/&gt;</span>
+<a name="l10"><span class="ln">10   </span></a>        <span class="s0">&lt;result </span><span class="s1">column</span><span class="s2">=&quot;categoryName&quot; </span><span class="s1">jdbcType</span><span class="s2">=&quot;VARCHAR&quot; </span><span class="s1">property</span><span class="s2">=&quot;categoryName&quot;</span><span class="s0">/&gt;</span>
+<a name="l11"><span class="ln">11   </span></a>    <span class="s0">&lt;/resultMap&gt;</span>
+</pre>
+</body>
+</html>
